@@ -38,7 +38,8 @@ function users(state = initialState, action) {
   }
 
   if (action.type === DEQUEUE_USER) {
-    const { userData, code } = action.payload;
+    const { userData } = action.payload;
+    const { code } = userData;
     return {
       ...state,
       unRegisteredChanges: state.unRegisteredChanges.filter(user => user.code !== code),

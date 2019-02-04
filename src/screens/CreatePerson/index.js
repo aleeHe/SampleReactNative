@@ -5,21 +5,13 @@ import {
     StyleSheet,
     TouchableOpacity,
     Dimensions,
-    Platform,
-    Alert,
-    Keyboard,
-    ActivityIndicator,
-    NetInfo,
-    NativeModules,
     ScrollView,
-    Image,
     KeyboardAvoidingView,
-    FlatList,
     TextInput,
 } from 'react-native';
 import { connect } from 'react-redux';
 import { Actions, ActionConst } from 'react-native-router-flux';
-import {createUser} from "../../actions";
+import {createUser, updateUser} from "../../actions";
 
 class CreatePerson extends Component {
     constructor(props) {
@@ -36,8 +28,13 @@ class CreatePerson extends Component {
     }
     
     componentDidMount() {
-        const code = String(Math.floor(Math.random() * 1000));
-        this.setState({group: this.props.groups[0], code});
+        if (this.props.userData) {
+            const {name, lastName, age, job, status, group, code} = this.props.userData;
+            this.setState({name, lastName, age, job, status, group, code});
+        } else {
+            const code = String(Math.floor(Math.random() * 1000));
+            this.setState({group: this.props.groups[0], code});
+        }
     }
 
     onNameChange = name => {
@@ -72,13 +69,33 @@ class CreatePerson extends Component {
         return true;
     }
 
-    handleCreateUser = async () => {
+    handleSubmitPress = async () => {
         if(!this.validateForm()) {
             return alert('complete the fields first!');
         }
         const {name, lastName, age, job, status, group, code} = this.state;
         const userData = {name, lastName, age, job, status, group, code};
-        await this.props.dispatch(createUser(userData));
+        try {
+            if (this.props.userData) {
+                try {
+                    await this.props.dispatch(updateUser({code, userData}));
+                    alert('User Updated!');
+                } catch (error) {
+                    alert('user will be updated when network connection be ok');
+                }
+                Actions.pop();
+            } else {
+                try {
+                    await this.props.dispatch(createUser(userData));
+                    Actions.pop();
+                    alert('User Created!');
+                } catch (error) {
+                    
+                }
+            }
+        } catch (error) {
+            
+        }
     }
     
     renderSelectStatus() {
@@ -128,9 +145,10 @@ class CreatePerson extends Component {
 
     render() {
         const {name, lastName, age, job} = this.state;
+        const headerText = this.props.userData ? 'Edit User' : 'Create User';
         return(
             <View style={styles.container}>
-                <Text style={styles.headerText}>Create User</Text>
+                <Text style={styles.headerText}>{headerText}</Text>
                 <ScrollView style={{flex: 1}}>
                     <KeyboardAvoidingView style={[styles.container, {paddingTop: 0}]}>
                         <TextInput
@@ -166,7 +184,7 @@ class CreatePerson extends Component {
 
                     </KeyboardAvoidingView>
                 </ScrollView>
-                <TouchableOpacity onPress={this.handleCreateUser} style={styles.submitButtonContainer}>
+                <TouchableOpacity onPress={this.handleSubmitPress} style={styles.submitButtonContainer}>
                     <Text style={styles.submitButtonText}>Submit</Text>
                 </TouchableOpacity>
             </View>

@@ -5,49 +5,56 @@ import {
     StyleSheet,
     TouchableOpacity,
     Dimensions,
-    Platform,
-    Alert,
-    Keyboard,
-    ActivityIndicator,
     NetInfo,
-    NativeModules,
-    ScrollView,
-    Image,
-    KeyboardAvoidingView,
     FlatList,
 } from 'react-native';
+import { changeStatusIntervalTime } from "../../env";
 import { connect } from 'react-redux';
 import { Actions, ActionConst } from 'react-native-router-flux';
-import { deQueueUserData } from "../../actions";
+import { deQueueUserData, updateUser } from "../../actions";
 
 class PersonsList extends Component {
     constructor(props) {
         super(props);
-        this.state = {
-
-        };
     }
-    
+
+    statusInterval = null;
+
     componentDidMount() {
         NetInfo.addEventListener('connectionChange', this.handleConnectivityChange);
+        this.statusInterval = setInterval(async () => {
+            const isConnected = await NetInfo.isConnected.fetch();
+            if (isConnected) {
+                this.props.users.map(user => {
+                    const newStatus = Math.floor(Math.random() * 3);
+                    this.props.dispatch(updateUser({code: user.code, userData: {status: newStatus}}));
+                })
+            }
+        }, changeStatusIntervalTime);
     }
 
-    handleConnectivityChange(connectionInfo) {
+    componentWillUnmount() {
+        NetInfo.removeEventListener('connectionChange', this.handleConnectivityChange);
+        clearInterval(statusInterval);
+    }
+
+    handleConnectivityChange = connectionInfo => {
         let {unRegisteredChanges} = this.props;
         if (connectionInfo.type != 'none' && unRegisteredChanges.length) {
-            unRegisteredChanges.forEach(user => {
-                this.props.dispatch(deQueueUserData({user}));
+            alert('network connected! applying changes...')
+            unRegisteredChanges.forEach(userData => {
+                this.props.dispatch(deQueueUserData({userData}));
             });
         }
     }
 
-    onUserRowClick() {
-        // Actions.firstScreen({type: ActionConst.RESET});
+    onUserRowClick(userData) {
+        Actions.createPerson({type: ActionConst.PUSH, userData});
     }
 
     renderFlatListItem = ({item}) => (
-        <TouchableOpacity onPress={this.onUserRowClick} style={styles.flatListItem}>
-            <Text style={{color: '#28A0DD', width: 70, paddingLeft: 15}}>{item.status}</Text>
+        <TouchableOpacity onPress={() => this.onUserRowClick(item)} style={styles.flatListItem}>
+            <Text style={{color: '#28A0DD', width: 80}}>{item.status == 2 ? 'InActive' : item.status == 1 ? 'Active' : 'none'}</Text>
             <Text style={{fontSize: 16}}>{`${item.name} ${item.lastName}`}</Text>
         </TouchableOpacity>
     );
@@ -75,10 +82,10 @@ class PersonsList extends Component {
 
 const NoUser = props => {
     return(
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+        <View style={styles.noUsersContainer}>
             <Text>No User Exist</Text>
-            <TouchableOpacity onPress={props.onCreateUserClick} style={{backgroundColor: '#8CAFFA', padding: 15, borderRadius: 50, marginTop: 15}}>
-                <Text style={{color: '#FFFFFF', fontSize: 16}}>+ Add User</Text>
+            <TouchableOpacity onPress={props.onCreateUserClick} style={styles.noUsersAddButton}>
+                <Text style={styles.buttonText}>+ Add User</Text>
             </TouchableOpacity>
         </View>
     );
@@ -86,11 +93,11 @@ const NoUser = props => {
 
 const UsersList = props => {
     return(
-        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
-            <View style={{width: width - 40, justifyContent: 'space-between', alignItems: 'flex-end', flexDirection: 'row'}}>
+        <View style={styles.usersListContainer}>
+            <View style={styles.usersListHeader}>
                 <Text style={{fontSize: 18}}>Users List</Text>
-                <TouchableOpacity onPress={props.onCreateUserClick} style={{backgroundColor: '#8CAFFA', padding: 15, borderRadius: 20, marginTop: 15}}>
-                    <Text style={{color: '#FFFFFF', fontSize: 16}}>+ Add</Text>
+                <TouchableOpacity onPress={props.onCreateUserClick} style={styles.usersListAddButton}>
+                    <Text style={styles.buttonText}>+ Add</Text>
                 </TouchableOpacity>
             </View>
             <FlatList
@@ -113,7 +120,39 @@ const styles = StyleSheet.create({
         marginVertical: 5,
         padding: 15,
         flexDirection: 'row',
-    }
+    },
+    usersListContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    usersListHeader: {
+        width: width - 40,
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        flexDirection: 'row'
+    },
+    usersListAddButton: {
+        backgroundColor: '#8CAFFA',
+        padding: 15,
+        borderRadius: 20,
+        marginTop: 15
+    },
+    noUsersContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    noUsersAddButton: {
+        backgroundColor: '#8CAFFA',
+        padding: 15,
+        borderRadius: 50,
+        marginTop: 15
+    },
+    buttonText: {
+        color: '#FFFFFF',
+        fontSize: 16
+    },
 });
 
 const select = store => {
