@@ -6,7 +6,7 @@ import { createWhitelistFilter } from 'redux-persist-transform-filter';
 
 const usersFilter = createWhitelistFilter(
   'users',
-  ['users', 'groups']
+  ['users', 'groups', 'unRegisteredChanges']
 );
 
 const migrations = {
